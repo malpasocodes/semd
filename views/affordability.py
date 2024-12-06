@@ -5,52 +5,43 @@ import plotly.express as px
 import pandas as pd
 
 def show_affordability_analysis():
-    # Use merge_datasets instead of just load_mobility_data
     df = merge_datasets()
     
     if df is not None:
-        # Create new grouping categories
         def get_group_and_subgroup(row):
-            if row['tier'] in [1, 2]:  # Elite
+            if row['tier'] in [1, 2]:
                 group = 'Elite'
                 subgroup = 'Ivy Plus' if row['tier'] == 1 else 'Other Elite'
-            elif row['tier'] in [3, 4]:  # Highly Selective
+            elif row['tier'] in [3, 4]:
                 group = 'Highly Selective'
                 subgroup = 'Public' if row['tier'] == 3 else 'Private'
-            elif row['tier'] in [5, 6]:  # Selective
+            elif row['tier'] in [5, 6]:
                 group = 'Selective'
                 subgroup = 'Public' if row['tier'] == 5 else 'Private'
-            elif row['tier'] in [7, 8]:  # Nonselective
+            elif row['tier'] in [7, 8]:
                 group = 'Nonselective'
                 subgroup = 'Public' if row['tier'] == 7 else 'Private'
-            elif row['tier'] == 10:  # For-profit
+            elif row['tier'] == 10:
                 group = 'Four-year for-profit'
                 subgroup = 'For-profit'
             return pd.Series([group, subgroup])
         
-        # Add group and subgroup columns
         df[['group', 'subgroup']] = df.apply(get_group_and_subgroup, axis=1)
-        
-        # Calculate mobility rate (Q4 + Q5)
         df['mobility_rate'] = df['kq4_cond_parq1'] + df['kq5_cond_parq1']
         
-        # Sidebar filters
         st.sidebar.header("Filters")
         
-        # Add Q1 enrollment filter
         min_q1_pct = st.sidebar.slider(
             "Minimum % of Q1 Students",
             min_value=0,
             max_value=50,
-            value=0,
+            value=5,
             step=1,
             help="Filter institutions by minimum percentage of students from bottom quintile"
         )
         
-        # Apply Q1 filter
         df = df[df['par_q1'] * 100 >= min_q1_pct]
         
-        # Calculate global medians after Q1 filter but before group selection
         global_median_price = df['sticker_price_2013'].median()
         global_median_mobility = df['mobility_rate'].median()
         
@@ -59,39 +50,37 @@ def show_affordability_analysis():
             ["All"] + sorted(df['group'].unique().tolist())
         )
         
-        # Filter data based on selection
         if selected_group != "All":
             plot_df = df[df['group'] == selected_group].copy()
         else:
             plot_df = df.copy()
 
-        # Create scatter plot
+        x_min = df['sticker_price_2013'].min()
+        x_max = df['sticker_price_2013'].max()
+        y_min = 0
+        y_max = df['mobility_rate'].max() * 1.1
+
         fig = px.scatter(
             plot_df,
             x='sticker_price_2013',
             y='mobility_rate',
             color='subgroup',
+            size='par_q1',
+            size_max=25,
             hover_name='name',
             labels={
                 'sticker_price_2013': 'Sticker Price ($)',
                 'mobility_rate': 'Mobility Rate (Q4 + Q5)',
-                'subgroup': 'Institution Type'
+                'subgroup': 'Institution Type',
+                'par_q1': 'Q1 Students'
             },
-            title=f"Mobility vs Affordability - {selected_group} (Global Medians)"
+            title=f"Mobility vs Affordability - {selected_group}"
         )
         
-        # Add quadrant lines using global medians
         fig.add_hline(y=global_median_mobility, line_dash="dash", line_color="gray", opacity=0.5)
         fig.add_vline(x=global_median_price, line_dash="dash", line_color="gray", opacity=0.5)
         
-        # Calculate fixed ranges based on full dataset
-        x_min = df['sticker_price_2013'].min()
-        x_max = df['sticker_price_2013'].max()
-        y_min = 0
-        y_max = df['mobility_rate'].max() * 1.1
-        
-        # Add quadrant labels with absolute positioning
-        fig.add_annotation(  # Top Left - Low Cost
+        fig.add_annotation(
             text="<b>High Mobility<br>Low Cost</b>",
             x=global_median_price - (global_median_price - x_min) * 0.7,
             y=global_median_mobility + (y_max - global_median_mobility) * 0.7,
@@ -99,7 +88,7 @@ def show_affordability_analysis():
             font=dict(size=14, color="black"),
             align='left'
         )
-        fig.add_annotation(  # Top Right - High Cost
+        fig.add_annotation(
             text="<b>High Mobility<br>High Cost</b>",
             x=global_median_price + (x_max - global_median_price) * 0.7,
             y=global_median_mobility + (y_max - global_median_mobility) * 0.7,
@@ -107,7 +96,7 @@ def show_affordability_analysis():
             font=dict(size=14, color="black"),
             align='right'
         )
-        fig.add_annotation(  # Bottom Left - Low Cost
+        fig.add_annotation(
             text="<b>Low Mobility<br>Low Cost</b>",
             x=global_median_price - (global_median_price - x_min) * 0.7,
             y=global_median_mobility * 0.3,
@@ -115,7 +104,7 @@ def show_affordability_analysis():
             font=dict(size=14, color="black"),
             align='left'
         )
-        fig.add_annotation(  # Bottom Right - High Cost
+        fig.add_annotation(
             text="<b>Low Mobility<br>High Cost</b>",
             x=global_median_price + (x_max - global_median_price) * 0.7,
             y=global_median_mobility * 0.3,
@@ -124,7 +113,6 @@ def show_affordability_analysis():
             align='right'
         )
         
-        # Update layout with fixed ranges
         fig.update_layout(
             xaxis=dict(
                 tickformat='$,.0f',
@@ -148,20 +136,18 @@ def show_affordability_analysis():
             autosize=False
         )
         
-        # Add hover template
         fig.update_traces(
             hovertemplate="<br>".join([
                 "<b>%{hovertext}</b>",
                 "Sticker Price: $%{x:,.0f}",
                 "Mobility Rate: %{y:.1%}",
+                "Q1 Students: %{marker.size:.1%}",
                 "<extra></extra>"
             ])
         )
         
-        # Display plot
         st.plotly_chart(fig, use_container_width=True)
         
-        # Enhanced summary statistics with quadrant information
         st.markdown("### Summary Statistics")
         col1, col2, col3 = st.columns(3)
         
@@ -174,16 +160,15 @@ def show_affordability_analysis():
             st.metric("Global Median Mobility Rate", 
                      f"{global_median_mobility:.1%}")
         
-        # Add quadrant analysis using global medians
         st.markdown("### Quadrant Distribution")
         q1 = len(plot_df[(plot_df['sticker_price_2013'] > global_median_price) & 
-                        (plot_df['mobility_rate'] > global_median_mobility)])  # High mobility, High cost
+                        (plot_df['mobility_rate'] > global_median_mobility)])
         q2 = len(plot_df[(plot_df['sticker_price_2013'] < global_median_price) & 
-                        (plot_df['mobility_rate'] > global_median_mobility)])  # High mobility, Low cost
+                        (plot_df['mobility_rate'] > global_median_mobility)])
         q3 = len(plot_df[(plot_df['sticker_price_2013'] > global_median_price) & 
-                        (plot_df['mobility_rate'] < global_median_mobility)])  # Low mobility, High cost
+                        (plot_df['mobility_rate'] < global_median_mobility)])
         q4 = len(plot_df[(plot_df['sticker_price_2013'] < global_median_price) & 
-                        (plot_df['mobility_rate'] < global_median_mobility)])  # Low mobility, Low cost
+                        (plot_df['mobility_rate'] < global_median_mobility)])
         
         col1, col2 = st.columns(2)
         with col1:
@@ -199,7 +184,6 @@ def show_affordability_analysis():
             - Low Mobility: {q4} institutions
             """)
 
-        # Add institution lists using global medians
         st.markdown("### Institution Lists by Quadrant")
         
         tab1, tab2, tab3, tab4 = st.tabs([
@@ -216,12 +200,13 @@ def show_affordability_analysis():
             ].copy()
             
             if not high_mob_low_cost.empty:
-                display_df = high_mob_low_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate']].copy()
+                display_df = high_mob_low_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', 'par_q1']].copy()
                 display_df = display_df.rename(columns={
                     'name': 'Institution',
                     'subgroup': 'Type',
                     'sticker_price_2013': 'Sticker Price',
-                    'mobility_rate': 'Mobility Rate'
+                    'mobility_rate': 'Mobility Rate',
+                    'par_q1': 'Q1 Students'
                 })
                 st.dataframe(
                     display_df.sort_values('Mobility Rate', ascending=False)
@@ -230,7 +215,8 @@ def show_affordability_analysis():
                     .set_index('Rank')
                     .style.format({
                         'Sticker Price': '${:,.0f}',
-                        'Mobility Rate': '{:.1%}'
+                        'Mobility Rate': '{:.1%}',
+                        'Q1 Students': '{:.1%}'
                     }),
                     use_container_width=True
                 )
@@ -244,12 +230,13 @@ def show_affordability_analysis():
             ].copy()
             
             if not high_mob_high_cost.empty:
-                display_df = high_mob_high_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate']].copy()
+                display_df = high_mob_high_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', 'par_q1']].copy()
                 display_df = display_df.rename(columns={
                     'name': 'Institution',
                     'subgroup': 'Type',
                     'sticker_price_2013': 'Sticker Price',
-                    'mobility_rate': 'Mobility Rate'
+                    'mobility_rate': 'Mobility Rate',
+                    'par_q1': 'Q1 Students'
                 })
                 st.dataframe(
                     display_df.sort_values('Mobility Rate', ascending=False)
@@ -258,7 +245,8 @@ def show_affordability_analysis():
                     .set_index('Rank')
                     .style.format({
                         'Sticker Price': '${:,.0f}',
-                        'Mobility Rate': '{:.1%}'
+                        'Mobility Rate': '{:.1%}',
+                        'Q1 Students': '{:.1%}'
                     }),
                     use_container_width=True
                 )
@@ -272,12 +260,13 @@ def show_affordability_analysis():
             ].copy()
             
             if not low_mob_low_cost.empty:
-                display_df = low_mob_low_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate']].copy()
+                display_df = low_mob_low_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', 'par_q1']].copy()
                 display_df = display_df.rename(columns={
                     'name': 'Institution',
                     'subgroup': 'Type',
                     'sticker_price_2013': 'Sticker Price',
-                    'mobility_rate': 'Mobility Rate'
+                    'mobility_rate': 'Mobility Rate',
+                    'par_q1': 'Q1 Students'
                 })
                 st.dataframe(
                     display_df.sort_values('Mobility Rate', ascending=False)
@@ -286,7 +275,8 @@ def show_affordability_analysis():
                     .set_index('Rank')
                     .style.format({
                         'Sticker Price': '${:,.0f}',
-                        'Mobility Rate': '{:.1%}'
+                        'Mobility Rate': '{:.1%}',
+                        'Q1 Students': '{:.1%}'
                     }),
                     use_container_width=True
                 )
@@ -300,12 +290,13 @@ def show_affordability_analysis():
             ].copy()
             
             if not low_mob_high_cost.empty:
-                display_df = low_mob_high_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate']].copy()
+                display_df = low_mob_high_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', 'par_q1']].copy()
                 display_df = display_df.rename(columns={
                     'name': 'Institution',
                     'subgroup': 'Type',
                     'sticker_price_2013': 'Sticker Price',
-                    'mobility_rate': 'Mobility Rate'
+                    'mobility_rate': 'Mobility Rate',
+                    'par_q1': 'Q1 Students'
                 })
                 st.dataframe(
                     display_df.sort_values('Mobility Rate', ascending=False)
@@ -314,7 +305,8 @@ def show_affordability_analysis():
                     .set_index('Rank')
                     .style.format({
                         'Sticker Price': '${:,.0f}',
-                        'Mobility Rate': '{:.1%}'
+                        'Mobility Rate': '{:.1%}',
+                        'Q1 Students': '{:.1%}'
                     }),
                     use_container_width=True
                 )
