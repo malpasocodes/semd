@@ -1,93 +1,181 @@
 import streamlit as st
-from utils.data_utils import load_mobility_data
-from utils.viz_utils import plot_mobility_ladder
+import pandas as pd
+from utils.mobility_utils import create_mobility_ladder
+from utils.viz_utils import plot_mobility_ladder, plot_mobility_sankey, plot_mobility_alluvial, plot_mobility_area
 
-def show_mobility_ladder():
-    df = load_mobility_data()
+def show_mobility_ladder(df=None, view_type="cumulative"):
+    """
+    Show mobility ladder analysis
     
-    if df is not None:
-        tier_map = {
-            1: "Ivy Plus",
-            2: "Other elite schools",
-            3: "Highly selective public",
-            4: "Highly selective private",
-            5: "Selective public",
-            6: "Selective private",
-            7: "Nonselective 4-year public",
-            8: "Nonselective 4-year private",
-            9: "Two-year (public and private)",
-            10: "Four-year for-profit"
+    Parameters:
+    -----------
+    df : pd.DataFrame, optional
+        Pre-filtered DataFrame. If None, loads and filters the data internally
+    view_type : str
+        Type of visualization to show: "cumulative", "individual", or "transitions"
+    """
+    # Set title based on view type
+    titles = {
+        "cumulative": "Cumulative Probability Analysis",
+        "individual": "Individual Probability Analysis",
+        "transitions": "Mobility Transitions Analysis"
+    }
+    
+    st.title(f"Economic Mobility: {titles[view_type]}")
+    st.markdown("""
+    This analysis shows where students from the bottom income quintile end up 
+    for each college. The percentages show the proportion of students moving 
+    to each income quintile.
+    """)
+    
+    # Load data if not provided
+    if df is None:
+        df = pd.read_csv("data/mrc_table2.csv")
+        df = df[df['iclevel'] == 1]  # Filter for 4-year colleges
+    
+    # Create mobility ladder DataFrame
+    df_mobility = create_mobility_ladder(df)
+    
+    # Create tier selection in sidebar
+    tier_map = {
+        1: "Ivy Plus",
+        2: "Other elite schools",
+        3: "Highly selective public",
+        4: "Highly selective private",
+        5: "Selective public",
+        6: "Selective private",
+        7: "Nonselective 4-year public",
+        8: "Nonselective 4-year private",
+        10: "Four-year for-profit"
+    }
+    
+    # Allow selection of types to compare
+    st.sidebar.markdown("### Compare College Types")
+    tier1 = st.sidebar.selectbox(
+        "First Type",
+        ["All"] + list(tier_map.values()),
+        key="tier1_select"
+    )
+    
+    remaining_tiers = ["All"] + [t for t in tier_map.values() if t != tier1]
+    tier2 = st.sidebar.selectbox(
+        "Second Type",
+        remaining_tiers,
+        key="tier2_select"
+    )
+    
+    # Create and display appropriate visualization
+    fig_line, fig_bar, college_data = plot_mobility_ladder(df_mobility, tier1, tier2)
+    
+    if view_type == "cumulative":
+        st.plotly_chart(fig_line, use_container_width=True)
+    elif view_type == "individual":
+        st.plotly_chart(fig_bar, use_container_width=True)
+    else:  # transitions
+        st.plotly_chart(fig_line, use_container_width=True)  # You might want to create a new visualization for transitions
+    
+    # Display college counts and statistics
+    st.markdown("### College Statistics")
+    
+    col1, col2 = st.columns(2)
+    
+    for tier_name, col in [(tier1, col1), (tier2, col2)]:
+        if tier_name in college_data:
+            tier_df = college_data[tier_name]
+            with col:
+                st.markdown(f"""
+                #### {tier_name}
+                - Number of colleges: {len(tier_df)}
+                - Average bottom quintile enrollment: {(tier_df['par_q1'].mean() * 100):.1f}%
+                - Average Q5 mobility rate: {(tier_df['kq5_cond_parq1'].mean() * 100):.1f}%
+                """)
+    
+    # Display colleges for each type
+    st.markdown("### Colleges by Type")
+    
+    col1, col2 = st.columns(2)
+    
+    column_config = {
+        'name': 'College Name',
+        'count': 'Student Count',
+        'par_q1': 'Q1 Enrollment %',
+        'kq5_cond_parq1': 'Q5 Mobility Rate'
+    }
+    
+    for tier_name, col in [(tier1, col1), (tier2, col2)]:
+        if tier_name in college_data:
+            tier_df = college_data[tier_name]
+            with col:
+                st.markdown(f"#### {tier_name} Colleges")
+                display_df = tier_df[['name', 'count', 'par_q1', 'kq5_cond_parq1']].copy()
+                display_df['par_q1'] = (display_df['par_q1'] * 100).round(1)
+                display_df['kq5_cond_parq1'] = (display_df['kq5_cond_parq1'] * 100).round(1)
+                st.dataframe(
+                    display_df,
+                    column_config=column_config,
+                    height=400
+                )
 
-        }
-        
-        # Add minimum Q1 students filter
-        min_q1_pct = st.sidebar.slider(
-            "Minimum % of Q1 Students",
-            min_value=0,
-            max_value=50,  # Adjust max as needed
-            value=5,
-            step=1,
-            help="Filter institutions by minimum percentage of students from bottom quintile"
-        )
-        
-        st.sidebar.markdown("---")  # Add separator
-        
-        col1, col2 = st.sidebar.columns(2)
-        with col1:
-            tier1 = st.selectbox("Select First Tier", 
-                               options=["All"] + list(tier_map.values()), 
-                               key='tier1')
-        with col2:
-            remaining_tiers = ["All"] + [t for t in tier_map.values() if t != tier1]
-            tier2 = st.selectbox("Select Second Tier", 
-                               options=remaining_tiers, 
-                               key='tier2')
-        
-        # Pre-filter the dataframe based on Q1 percentage
-        filtered_df = df[df['par_q1'] * 100 >= min_q1_pct].copy()
-        
-        if len(filtered_df) > 0:
-            # Create and display plots
-            fig_line, fig_bar, college_data = plot_mobility_ladder(filtered_df, tier1, tier2)
-            
-            # Display both plots
-            st.plotly_chart(fig_line, use_container_width=True)
-            st.plotly_chart(fig_bar, use_container_width=True)
-            
-            # Display institution lists
-            st.markdown("### Institutions by Tier")
-            st.markdown(f"*Showing institutions with {min_q1_pct}% or more students from bottom quintile*")
-            
-            tab1, tab2 = st.tabs([tier1, tier2])
-            
-            with tab1:
-                display_df = college_data[tier1].copy()
-                display_df['Q1 Students %'] = display_df['par_q1'] * 100
-                display_df['Q4/Q5 Mobility %'] = (display_df['kq4_cond_parq1'] + display_df['kq5_cond_parq1']) * 100
-                
-                st.dataframe(
-                    display_df[['name', 'Q1 Students %', 'Q4/Q5 Mobility %']]
-                    .sort_values('Q4/Q5 Mobility %', ascending=False)
-                    .style.format({
-                        'Q1 Students %': '{:.1f}%',
-                        'Q4/Q5 Mobility %': '{:.1f}%'
-                    }),
-                    use_container_width=True
-                )
-            
-            with tab2:
-                display_df = college_data[tier2].copy()
-                display_df['Q1 Students %'] = display_df['par_q1'] * 100
-                display_df['Q4/Q5 Mobility %'] = (display_df['kq4_cond_parq1'] + display_df['kq5_cond_parq1']) * 100
-                
-                st.dataframe(
-                    display_df[['name', 'Q1 Students %', 'Q4/Q5 Mobility %']]
-                    .sort_values('Q4/Q5 Mobility %', ascending=False)
-                    .style.format({
-                        'Q1 Students %': '{:.1f}%',
-                        'Q4/Q5 Mobility %': '{:.1f}%'
-                    }),
-                    use_container_width=True
-                )
-        else:
-            st.warning(f"No institutions have {min_q1_pct}% or more students from the bottom quintile. Try lowering the threshold.")
+def show_mobility_visualizations(df):
+    """
+    Show detailed visualizations of mobility patterns
+    """
+    st.title("Detailed Mobility Visualizations")
+    st.markdown("""
+    This page provides additional visualizations to help understand mobility patterns
+    across different college tiers.
+    """)
+    
+    # Create mobility ladder DataFrame
+    df_mobility = create_mobility_ladder(df)
+    
+    # Create tier selection
+    tier_map = {
+        1: "Ivy Plus",
+        2: "Other elite schools",
+        3: "Highly selective public",
+        4: "Highly selective private",
+        5: "Selective public",
+        6: "Selective private",
+        7: "Nonselective 4-year public",
+        8: "Nonselective 4-year private",
+        10: "Four-year for-profit"
+    }
+    
+    selected_tier = st.selectbox(
+        "Select College Tier",
+        ["All"] + list(tier_map.values())
+    )
+    
+    if selected_tier == "All":
+        tier_df = df_mobility
+    else:
+        tier_id = next(k for k, v in tier_map.items() if v == selected_tier)
+        tier_df = df_mobility[df_mobility['tier'] == tier_id]
+    
+    # Display Sankey diagram
+    st.subheader("Student Flow Visualization")
+    st.markdown("""
+    This Sankey diagram shows how students from the bottom quintile flow to different income quintiles.
+    The width of each flow represents the percentage of students.
+    """)
+    sankey_fig = plot_mobility_sankey(tier_df, selected_tier)
+    st.plotly_chart(sankey_fig, use_container_width=True)
+    
+    # Display Alluvial plot
+    st.subheader("Mobility Transitions")
+    st.markdown("""
+    This visualization shows the transitions from bottom quintile to each destination quintile.
+    The thickness of each line represents the percentage of students making that transition.
+    """)
+    alluvial_fig = plot_mobility_alluvial(tier_df, selected_tier)
+    st.plotly_chart(alluvial_fig, use_container_width=True)
+    
+    # Display Area chart
+    st.subheader("Cumulative Mobility Distribution")
+    st.markdown("""
+    This stacked area chart shows the cumulative distribution of students across quintiles.
+    Each color represents a different destination quintile.
+    """)
+    area_fig = plot_mobility_area(tier_df, selected_tier)
+    st.plotly_chart(area_fig, use_container_width=True)

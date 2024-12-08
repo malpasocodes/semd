@@ -1,13 +1,32 @@
-
 import streamlit as st
 from utils.data_utils import merge_datasets
 import plotly.express as px
 import pandas as pd
 
-def show_affordability_analysis():
+def show_affordability_analysis(df=None):
+    """
+    Show affordability analysis
+    
+    Parameters:
+    -----------
+    df : pd.DataFrame, optional
+        Pre-filtered DataFrame. If None, loads and filters the data internally
+    """
+    # Always load merged dataset first
     df = merge_datasets()
     
     if df is not None:
+        # Apply minimum Q1 filter
+        min_q1_pct = st.sidebar.slider(
+            "Minimum % of Bottom Quintile Students",
+            min_value=0,
+            max_value=20,
+            value=3,
+            help="Filter for colleges with at least this percentage of students from the bottom quintile"
+        )
+        
+        df = df[df['par_q1'] * 100 >= min_q1_pct]
+        
         def get_group_and_subgroup(row):
             if row['tier'] in [1, 2]:
                 group = 'Elite'
@@ -30,17 +49,6 @@ def show_affordability_analysis():
         df['mobility_rate'] = df['kq4_cond_parq1'] + df['kq5_cond_parq1']
         
         st.sidebar.header("Filters")
-        
-        min_q1_pct = st.sidebar.slider(
-            "Minimum % of Q1 Students",
-            min_value=0,
-            max_value=50,
-            value=5,
-            step=1,
-            help="Filter institutions by minimum percentage of students from bottom quintile"
-        )
-        
-        df = df[df['par_q1'] * 100 >= min_q1_pct]
         
         global_median_price = df['sticker_price_2013'].median()
         global_median_mobility = df['mobility_rate'].median()
