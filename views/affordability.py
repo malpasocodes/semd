@@ -68,14 +68,27 @@ def show_affordability_analysis(df=None):
         y_min = 0
         y_max = df['mobility_rate'].max() * 1.1
 
+        # Create a custom color map for institution types
+        color_map = {
+            'Public': '#1a9850',  # Green for public institutions
+            'Private': '#377eb8',  # Keep existing color for private
+            'For-profit': '#e41a1c',  # Keep existing color for for-profit
+            'Ivy Plus': '#984ea3',  # Keep existing color for Ivy
+            'Other Elite': '#ff7f00'  # Keep existing color for other elite
+        }
+
+        # Adjust size_max based on selected group
+        bubble_size = 25 if selected_group == "All" else 15
+
         fig = px.scatter(
             plot_df,
             x='sticker_price_2013',
             y='mobility_rate',
             color='subgroup',
             size='par_q1',
-            size_max=25,
+            size_max=bubble_size,  # Use dynamic bubble size
             hover_name='name',
+            color_discrete_map=color_map,
             labels={
                 'sticker_price_2013': 'Sticker Price ($)',
                 'mobility_rate': 'Mobility Rate (Q4 + Q5)',
@@ -85,8 +98,18 @@ def show_affordability_analysis(df=None):
             title=f"Mobility vs Affordability - {selected_group}"
         )
         
-        fig.add_hline(y=global_median_mobility, line_dash="dash", line_color="gray", opacity=0.5)
-        fig.add_vline(x=global_median_price, line_dash="dash", line_color="gray", opacity=0.5)
+        # Add black borders to all markers
+        fig.update_traces(
+            marker=dict(
+                line=dict(
+                    color='black',
+                    width=1
+                )
+            )
+        )
+        
+        fig.add_hline(y=global_median_mobility, line_dash="dash", line_color="black", opacity=0.7, line_width=1.5)
+        fig.add_vline(x=global_median_price, line_dash="dash", line_color="black", opacity=0.7, line_width=1.5)
         
         fig.add_annotation(
             text="<b>High Mobility<br>Low Cost</b>",
