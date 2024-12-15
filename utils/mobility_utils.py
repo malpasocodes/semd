@@ -1,28 +1,44 @@
 import pandas as pd
 import numpy as np
 
-def create_mobility_ladder(df):
+def create_mobility_ladder(df, parent_quintile=1):
     """
     Creates mobility ladder dataframe showing probability of movement across quintiles
-    for students from bottom quintile families
+    for students from specified parent quintile
+    
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Input dataframe
+    parent_quintile : int
+        Parent income quintile to analyze (1-5)
     """
-    columns = [
+    # Base columns that don't change with quintile
+    base_columns = [
         'name',                # College identifier
         'count',              # Number of students
         'tier',               # College tier
         'type',               # Institution type
-        'par_q1',            # Percent of students from bottom quintile
-        'kq1_cond_parq1',     # Stayed in Q1
-        'kq2_cond_parq1',     # Moved to Q2
-        'kq3_cond_parq1',     # Moved to Q3
-        'kq4_cond_parq1',     # Moved to Q4
-        'kq5_cond_parq1'      # Moved to Q5
     ]
+    
+    # Add parent quintile column
+    parent_col = f'par_q{parent_quintile}'
+    
+    # Add child quintile columns for selected parent quintile
+    child_cols = [f'kq{k}_cond_parq{parent_quintile}' for k in range(1, 6)]
+    
+    columns = base_columns + [parent_col] + child_cols
     
     mobility_df = df[columns].copy()
     
     # Convert count to integer
     mobility_df['count'] = mobility_df['count'].astype(int)
+    
+    # Rename columns for consistency
+    mobility_df = mobility_df.rename(columns={
+        parent_col: 'par_q',  # Generic parent quintile column name
+        **{f'kq{k}_cond_parq{parent_quintile}': f'kq{k}_cond_parq' for k in range(1, 6)}  # Generic child quintile column names
+    })
     
     return mobility_df
 

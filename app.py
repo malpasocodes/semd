@@ -1,8 +1,9 @@
 # app.py
 import streamlit as st
-from views.economic import show_mobility_ladder
+from views.economic import show_mobility_ladder, show_data_verification
 from views.mobility import show_mobility_visualizations
 from views.affordability import show_affordability_analysis
+from views.institution import show_institution_profile
 import pandas as pd
 
 def get_page_config():
@@ -14,10 +15,41 @@ def get_page_config():
 
 def show_home():
     st.title("College Mobility Analysis Dashboard")
+    
+    # Main description
     st.markdown("""
     ### Understanding Intergenerational Income Mobility in Higher Education
     
-    Select an analysis from the sidebar to begin exploring.
+    This interactive dashboard explores how different colleges and universities contribute to intergenerational 
+    income mobility. Using data from [Opportunity Insights](https://opportunityinsights.org/), we analyze how students from different 
+    income backgrounds fare after attending specific institutions, with a particular focus on the relationship 
+    between mobility outcomes and college affordability.
+    """)
+    
+    # Navigation guide
+    st.markdown("""
+    ### Using the Dashboard
+    
+    Use the sidebar on the left to navigate through different analyses:
+    
+    1. **Select Category** - Choose between:
+       - *Mobility Ladder*: Examine how students from a specific parent income quintile move across income quintiles
+       - *Mobility vs Affordability*: Explore the relationship between mobility rates and college costs
+    
+    2. **Select Analysis Group** - Currently focused on four-year colleges
+    
+    3. **Select Analysis** - Choose specific visualizations and analyses within each category
+    
+    Additional filters and settings will appear in the sidebar based on your selections, allowing you to 
+    customize the analysis for specific institution types and student populations.
+    """)
+    
+    # Add cautionary note at the bottom
+    st.markdown("---")  # Add a horizontal line for separation
+    st.warning("""
+    **⚠️ Note:** This website is currently under construction and active development. 
+    The data and analyses are being verified and validated. Please use the results with caution 
+    and refer to [Opportunity Insights](https://opportunityinsights.org/) for the official data and documentation.
     """)
 
 def apply_filters(df, include_inst_group=True):
@@ -54,7 +86,7 @@ def apply_filters(df, include_inst_group=True):
         "Minimum % of Bottom Quintile Students",
         min_value=0,
         max_value=20,
-        value=3,
+        value=0,
         help="Filter for colleges with at least this percentage of students from the bottom quintile"
     )
     
@@ -69,7 +101,7 @@ def main():
     # First level: Category Selection
     category = st.sidebar.selectbox(
         "Select Category",
-        ["Home", "Mobility Ladder", "Mobility vs Affordability"]
+        ["Home", "Mobility Ladder", "Mobility vs Affordability", "Institution Explorer"]
     )
     
     if category == "Home":
@@ -82,11 +114,14 @@ def main():
             "Four Year College": [
                 "Cumulative Probability",
                 "Individual Probability",
-                "Mobility Transitions"
+                "Data Verification"
             ],
         },
         "Mobility vs Affordability": {
             "Four Year College": ["Mobility vs Affordability Quadrant", "Cost Trends"],
+        },
+        "Institution Explorer": {
+            "Four Year College": ["Institution Profile", "Peer Comparison"]
         }
     }
     
@@ -108,27 +143,65 @@ def main():
     if category == "Mobility Ladder":
         # Load data once
         df = pd.read_csv("data/mrc_table2.csv")
-        df = df[df['iclevel'] == 1]  # Filter for 4-year colleges
+        
+        # Filter for 4-year colleges
+        df = df[df['iclevel'] == 1]
         
         # Apply filters without institution group
         filtered_df = apply_filters(df, include_inst_group=False)
         
         if analysis_group == "Four Year College":
-            if analysis == "Cumulative Probability":
-                show_mobility_ladder(filtered_df, "cumulative")
+            # Add parent quintile selection
+            st.sidebar.markdown("### Analysis Settings")
+            selected_quintile = st.sidebar.selectbox(
+                "Select Parent Income Quintile",
+                ["Q1", "Q2", "Q3", "Q4", "Q5"],
+                index=0
+            )
+            quintile_num = int(selected_quintile[1])
+            
+            if analysis == "Data Verification":
+                show_data_verification(filtered_df, quintile_num)
+            elif analysis == "Cumulative Probability":
+                show_mobility_ladder(filtered_df, "cumulative", parent_quintile=quintile_num)
             elif analysis == "Individual Probability":
-                show_mobility_ladder(filtered_df, "individual")
-            elif analysis == "Mobility Transitions":
-                show_mobility_ladder(filtered_df, "transitions")
+                show_mobility_ladder(filtered_df, "individual", parent_quintile=quintile_num)
         else:
             st.info("This analysis is currently under development.")
             
     elif category == "Mobility vs Affordability":
-        if analysis == "Mobility vs Affordability Quadrant":
-            # Let the affordability view handle its own data loading and filtering
-            show_affordability_analysis()
+        # Load and merge datasets
+        from utils.data_utils import merge_datasets
+        df = merge_datasets()
+        
+        if df is not None:  # Check if merge was successful
+            if analysis == "Mobility vs Affordability Quadrant":
+                # Add parent quintile selection
+                st.sidebar.markdown("### Analysis Settings")
+                selected_quintile = st.sidebar.selectbox(
+                    "Select Parent Income Quintile",
+                    ["Q1", "Q2", "Q3", "Q4", "Q5"],
+                    index=0
+                )
+                quintile_num = int(selected_quintile[1])
+                
+                show_affordability_analysis(df, parent_quintile=quintile_num)
+            else:
+                st.info("This analysis is currently under development.")
         else:
-            st.info("This analysis is currently under development.")
+            st.error("Error loading data. Please check the data files.")
+    elif category == "Institution Explorer":
+        # Load and merge datasets
+        from utils.data_utils import merge_datasets
+        df = merge_datasets()
+        
+        if df is not None:  # Check if merge was successful
+            if analysis == "Institution Profile":
+                show_institution_profile(df)
+            else:
+                st.info("This analysis is currently under development.")
+        else:
+            st.error("Error loading data. Please check the data files.")
 
 if __name__ == "__main__":
     main()

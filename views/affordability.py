@@ -3,30 +3,21 @@ from utils.data_utils import merge_datasets
 import plotly.express as px
 import pandas as pd
 
-def show_affordability_analysis(df=None):
+def show_affordability_analysis(df=None, parent_quintile=1):
     """
     Show affordability analysis
     
     Parameters:
     -----------
-    df : pd.DataFrame, optional
-        Pre-filtered DataFrame. If None, loads and filters the data internally
+    df : pd.DataFrame
+        Pre-filtered DataFrame
+    parent_quintile : int
+        Parent income quintile to analyze (1-5)
     """
-    # Always load merged dataset first
-    df = merge_datasets()
+    if df is None:
+        df = merge_datasets()
     
     if df is not None:
-        # Apply minimum Q1 filter
-        min_q1_pct = st.sidebar.slider(
-            "Minimum % of Bottom Quintile Students",
-            min_value=0,
-            max_value=20,
-            value=3,
-            help="Filter for colleges with at least this percentage of students from the bottom quintile"
-        )
-        
-        df = df[df['par_q1'] * 100 >= min_q1_pct]
-        
         def get_group_and_subgroup(row):
             if row['tier'] in [1, 2]:
                 group = 'Elite'
@@ -46,7 +37,12 @@ def show_affordability_analysis(df=None):
             return pd.Series([group, subgroup])
         
         df[['group', 'subgroup']] = df.apply(get_group_and_subgroup, axis=1)
-        df['mobility_rate'] = df['kq4_cond_parq1'] + df['kq5_cond_parq1']
+        
+        # Update mobility rate calculation for selected parent quintile
+        df['mobility_rate'] = (
+            df[f'kq4_cond_parq{parent_quintile}'] + 
+            df[f'kq5_cond_parq{parent_quintile}']
+        )
         
         st.sidebar.header("Filters")
         
@@ -224,6 +220,16 @@ def show_affordability_analysis(df=None):
             "Low Mobility, High Cost"
         ])
         
+        # Update labels for the quadrant lists
+        column_labels = {
+            'name': 'Institution',
+            'subgroup': 'Type',
+            'sticker_price_2013': 'Sticker Price',
+            'mobility_rate': 'Mobility Rate',
+            f'par_q{parent_quintile}': f'Q{parent_quintile} Students'  # Dynamic column name
+        }
+
+        # Update display for each quadrant
         with tab1:
             high_mob_low_cost = plot_df[
                 (plot_df['sticker_price_2013'] < global_median_price) & 
@@ -231,14 +237,8 @@ def show_affordability_analysis(df=None):
             ].copy()
             
             if not high_mob_low_cost.empty:
-                display_df = high_mob_low_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', 'par_q1']].copy()
-                display_df = display_df.rename(columns={
-                    'name': 'Institution',
-                    'subgroup': 'Type',
-                    'sticker_price_2013': 'Sticker Price',
-                    'mobility_rate': 'Mobility Rate',
-                    'par_q1': 'Q1 Students'
-                })
+                display_df = high_mob_low_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', f'par_q{parent_quintile}']].copy()
+                display_df = display_df.rename(columns=column_labels)
                 st.dataframe(
                     display_df.sort_values('Mobility Rate', ascending=False)
                     .reset_index(drop=True)
@@ -247,7 +247,7 @@ def show_affordability_analysis(df=None):
                     .style.format({
                         'Sticker Price': '${:,.0f}',
                         'Mobility Rate': '{:.1%}',
-                        'Q1 Students': '{:.1%}'
+                        f'Q{parent_quintile} Students': '{:.1%}'
                     }),
                     use_container_width=True
                 )

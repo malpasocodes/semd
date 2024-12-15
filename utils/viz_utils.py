@@ -43,18 +43,18 @@ def plot_mobility_ladder(df, tier1, tier2):
         if len(tier_df) == 0:
             continue
             
-        # Calculate probabilities
-        q5_prob = tier_df['kq5_cond_parq1'].mean()
-        q4_prob = tier_df['kq4_cond_parq1'].mean()
-        q3_prob = tier_df['kq3_cond_parq1'].mean()
-        q2_prob = tier_df['kq2_cond_parq1'].mean()
-        q1_prob = tier_df['kq1_cond_parq1'].mean()
+        # Calculate probabilities using new generic column names
+        q5_prob = tier_df['kq5_cond_parq'].mean()
+        q4_prob = tier_df['kq4_cond_parq'].mean()
+        q3_prob = tier_df['kq3_cond_parq'].mean()
+        q2_prob = tier_df['kq2_cond_parq'].mean()
+        q1_prob = tier_df['kq1_cond_parq'].mean()
         
         # Calculate Q4+Q5 probability
         q4q5_prob = (q5_prob + q4_prob) * 100
         
         # Calculate average bottom quintile enrollment if column exists
-        avg_q1_pct = tier_df['par_q1'].mean() * 100 if 'par_q1' in tier_df.columns else 0
+        avg_q1_pct = tier_df['par_q'].mean() * 100 if 'par_q' in tier_df.columns else 0
         
         # Create cumulative probabilities for line plot
         x = ['Q5', 'Q4', 'Q3', 'Q2', 'Q1']
@@ -281,11 +281,11 @@ def plot_mobility_ladder_cdf(df):
             continue
         
         # Calculate mean probabilities using correct column names
-        q5_prob = tier_df['kq5_cond_parq1'].mean()
-        q4_prob = tier_df['kq4_cond_parq1'].mean()
-        q3_prob = tier_df['kq3_cond_parq1'].mean()
-        q2_prob = tier_df['kq2_cond_parq1'].mean()
-        q1_prob = tier_df['kq1_cond_parq1'].mean()
+        q5_prob = tier_df['kq5_cond_parq'].mean()
+        q4_prob = tier_df['kq4_cond_parq'].mean()
+        q3_prob = tier_df['kq3_cond_parq'].mean()
+        q2_prob = tier_df['kq2_cond_parq'].mean()
+        q1_prob = tier_df['kq1_cond_parq'].mean()
         
         # Create cumulative probabilities
         x = ['Q5', 'Q4', 'Q3', 'Q2', 'Q1']
@@ -339,11 +339,11 @@ def plot_mobility_ladder_cdf(df):
         tier_df = college_data[tier_name]
         
         if len(tier_df) > 0:
-            q5_prob = tier_df['kq5_cond_parq1'].mean()
-            q4_prob = tier_df['kq4_cond_parq1'].mean()
-            q3_prob = tier_df['kq3_cond_parq1'].mean()
-            q2_prob = tier_df['kq2_cond_parq1'].mean()
-            q1_prob = tier_df['kq1_cond_parq1'].mean()
+            q5_prob = tier_df['kq5_cond_parq'].mean()
+            q4_prob = tier_df['kq4_cond_parq'].mean()
+            q3_prob = tier_df['kq3_cond_parq'].mean()
+            q2_prob = tier_df['kq2_cond_parq'].mean()
+            q1_prob = tier_df['kq1_cond_parq'].mean()
             
             with col:
                 st.markdown(f"""
@@ -369,11 +369,11 @@ def plot_mobility_sankey(df, tier_name):
     quintile_names = ['Bottom Quintile', 'Q2', 'Q3', 'Q4', 'Top Quintile']
     
     flows = [
-        df['kq1_cond_parq1'].mean(),
-        df['kq2_cond_parq1'].mean(),
-        df['kq3_cond_parq1'].mean(),
-        df['kq4_cond_parq1'].mean(),
-        df['kq5_cond_parq1'].mean()
+        df['kq1_cond_parq'].mean(),
+        df['kq2_cond_parq'].mean(),
+        df['kq3_cond_parq'].mean(),
+        df['kq4_cond_parq'].mean(),
+        df['kq5_cond_parq'].mean()
     ]
     
     for i, flow in enumerate(flows):
@@ -414,11 +414,11 @@ def plot_mobility_alluvial(df, tier_name):
     
     # Calculate probabilities for each quintile
     probs = [
-        df['kq5_cond_parq1'].mean(),
-        df['kq4_cond_parq1'].mean(),
-        df['kq3_cond_parq1'].mean(),
-        df['kq2_cond_parq1'].mean(),
-        df['kq1_cond_parq1'].mean()
+        df['kq5_cond_parq'].mean(),
+        df['kq4_cond_parq'].mean(),
+        df['kq3_cond_parq'].mean(),
+        df['kq2_cond_parq'].mean(),
+        df['kq1_cond_parq'].mean()
     ]
     
     # Create figure
@@ -464,11 +464,11 @@ def plot_mobility_area(df, tier_name):
     """
     # Calculate cumulative probabilities
     probs = [
-        df['kq5_cond_parq1'].mean() * 100,
-        df['kq4_cond_parq1'].mean() * 100,
-        df['kq3_cond_parq1'].mean() * 100,
-        df['kq2_cond_parq1'].mean() * 100,
-        df['kq1_cond_parq1'].mean() * 100
+        df['kq5_cond_parq'].mean() * 100,
+        df['kq4_cond_parq'].mean() * 100,
+        df['kq3_cond_parq'].mean() * 100,
+        df['kq2_cond_parq'].mean() * 100,
+        df['kq1_cond_parq'].mean() * 100
     ]
     
     fig = go.Figure()
