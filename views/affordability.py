@@ -261,14 +261,8 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             ].copy()
             
             if not high_mob_high_cost.empty:
-                display_df = high_mob_high_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', 'par_q1']].copy()
-                display_df = display_df.rename(columns={
-                    'name': 'Institution',
-                    'subgroup': 'Type',
-                    'sticker_price_2013': 'Sticker Price',
-                    'mobility_rate': 'Mobility Rate',
-                    'par_q1': 'Q1 Students'
-                })
+                display_df = high_mob_high_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', f'par_q{parent_quintile}']].copy()
+                display_df = display_df.rename(columns=column_labels)
                 st.dataframe(
                     display_df.sort_values('Mobility Rate', ascending=False)
                     .reset_index(drop=True)
@@ -277,7 +271,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
                     .style.format({
                         'Sticker Price': '${:,.0f}',
                         'Mobility Rate': '{:.1%}',
-                        'Q1 Students': '{:.1%}'
+                        f'Q{parent_quintile} Students': '{:.1%}'
                     }),
                     use_container_width=True
                 )
@@ -291,14 +285,8 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             ].copy()
             
             if not low_mob_low_cost.empty:
-                display_df = low_mob_low_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', 'par_q1']].copy()
-                display_df = display_df.rename(columns={
-                    'name': 'Institution',
-                    'subgroup': 'Type',
-                    'sticker_price_2013': 'Sticker Price',
-                    'mobility_rate': 'Mobility Rate',
-                    'par_q1': 'Q1 Students'
-                })
+                display_df = low_mob_low_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', f'par_q{parent_quintile}']].copy()
+                display_df = display_df.rename(columns=column_labels)
                 st.dataframe(
                     display_df.sort_values('Mobility Rate', ascending=False)
                     .reset_index(drop=True)
@@ -307,7 +295,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
                     .style.format({
                         'Sticker Price': '${:,.0f}',
                         'Mobility Rate': '{:.1%}',
-                        'Q1 Students': '{:.1%}'
+                        f'Q{parent_quintile} Students': '{:.1%}'
                     }),
                     use_container_width=True
                 )
@@ -321,14 +309,8 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             ].copy()
             
             if not low_mob_high_cost.empty:
-                display_df = low_mob_high_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', 'par_q1']].copy()
-                display_df = display_df.rename(columns={
-                    'name': 'Institution',
-                    'subgroup': 'Type',
-                    'sticker_price_2013': 'Sticker Price',
-                    'mobility_rate': 'Mobility Rate',
-                    'par_q1': 'Q1 Students'
-                })
+                display_df = low_mob_high_cost[['name', 'subgroup', 'sticker_price_2013', 'mobility_rate', f'par_q{parent_quintile}']].copy()
+                display_df = display_df.rename(columns=column_labels)
                 st.dataframe(
                     display_df.sort_values('Mobility Rate', ascending=False)
                     .reset_index(drop=True)
@@ -337,7 +319,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
                     .style.format({
                         'Sticker Price': '${:,.0f}',
                         'Mobility Rate': '{:.1%}',
-                        'Q1 Students': '{:.1%}'
+                        f'Q{parent_quintile} Students': '{:.1%}'
                     }),
                     use_container_width=True
                 )

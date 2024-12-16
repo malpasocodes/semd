@@ -4,6 +4,7 @@ from views.economic import show_mobility_ladder, show_data_verification
 from views.mobility import show_mobility_visualizations
 from views.affordability import show_affordability_analysis
 from views.institution import show_institution_profile
+from views.enrollment import show_enrollment_patterns
 import pandas as pd
 
 def get_page_config():
@@ -101,7 +102,7 @@ def main():
     # First level: Category Selection
     category = st.sidebar.selectbox(
         "Select Category",
-        ["Home", "Mobility Ladder", "Mobility vs Affordability", "Institution Explorer"]
+        ["Home", "Mobility Ladder", "Mobility vs Affordability", "Institution Explorer", "Enrollment Explorer"]
     )
     
     if category == "Home":
@@ -122,6 +123,9 @@ def main():
         },
         "Institution Explorer": {
             "Four Year College": ["Institution Profile", "Peer Comparison"]
+        },
+        "Enrollment Explorer": {
+            "Four Year College": ["Enrollment Patterns"]
         }
     }
     
@@ -202,6 +206,15 @@ def main():
                 st.info("This analysis is currently under development.")
         else:
             st.error("Error loading data. Please check the data files.")
+    elif category == "Enrollment Explorer":
+        # Load data
+        df = pd.read_csv("data/mrc_table2.csv")
+        df = df[df['iclevel'] == 1]  # Filter for 4-year colleges
+        
+        if analysis == "Enrollment Patterns":
+            show_enrollment_patterns(df)
+        else:
+            st.info("This analysis is currently under development.")
 
 if __name__ == "__main__":
     main()

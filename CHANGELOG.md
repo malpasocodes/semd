@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.0] - 2024-03-19
+## [0.3.0] - 2024-03-19
+### Added
+- Enrollment Explorer category with comparative analysis
+- Interactive college type selection for enrollment patterns
+- Enhanced visualization with dual-purpose chart:
+  - Bar chart showing enrollment distribution across quintiles and top percentiles
+  - Cumulative line showing progressive totals up to Q5
+- Detailed summary statistics for each college type
+
+### Changed
+- Improved chart layout and readability
+- Optimized label positioning for better visibility
+- Enhanced data presentation with custom offsets and spacing
+
+## [0.2.0]
 ### Added
 - Institution Explorer category with detailed institution-level analysis
 - Interactive institution selection with state and tier filters
