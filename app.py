@@ -102,7 +102,7 @@ def main():
     # First level: Category Selection
     category = st.sidebar.selectbox(
         "Select Category",
-        ["Home", "Mobility Ladder", "Mobility vs Affordability", "Institution Explorer", "Enrollment Explorer"]
+        ["Home", "Mobility Ladder", "Mobility vs Affordability", "Institution Explorer", "Enrollment Explorer", "Mobility Work"]
     )
     
     if category == "Home":
@@ -126,6 +126,9 @@ def main():
         },
         "Enrollment Explorer": {
             "Four Year College": ["Enrollment Patterns"]
+        },
+        "Mobility Work": {
+            "Four Year College": ["Work Analysis"]
         }
     }
     
@@ -215,6 +218,19 @@ def main():
             show_enrollment_patterns(df)
         else:
             st.info("This analysis is currently under development.")
+    elif category == "Mobility Work":
+        # Load and merge datasets
+        from utils.data_utils import merge_datasets
+        df = merge_datasets()
+        
+        if df is not None:
+            if analysis == "Work Analysis":
+                from views.mobility_work import show_mobility_work_analysis
+                show_mobility_work_analysis(df)
+            else:
+                st.info("This analysis is currently under development.")
+        else:
+            st.error("Error loading data. Please check the data files.")
 
 if __name__ == "__main__":
     main()

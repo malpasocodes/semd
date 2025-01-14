@@ -49,15 +49,19 @@ def show_affordability_analysis(df=None, parent_quintile=1):
         global_median_price = df['sticker_price_2013'].median()
         global_median_mobility = df['mobility_rate'].median()
         
-        selected_group = st.sidebar.selectbox(
-            "Select Institution Group",
-            ["All"] + sorted(df['group'].unique().tolist())
+        # Change from selectbox to multiselect
+        selected_groups = st.sidebar.multiselect(
+            "Select Institution Groups",
+            options=["All"] + sorted(df['group'].unique().tolist()),
+            default=["All"],
+            help="Select one or more institution groups to compare"
         )
         
-        if selected_group != "All":
-            plot_df = df[df['group'] == selected_group].copy()
-        else:
+        # Modify the filtering logic
+        if "All" in selected_groups:
             plot_df = df.copy()
+        else:
+            plot_df = df[df['group'].isin(selected_groups)].copy()
 
         x_min = df['sticker_price_2013'].min()
         x_max = df['sticker_price_2013'].max()
@@ -73,8 +77,8 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             'Other Elite': '#ff7f00'  # Keep existing color for other elite
         }
 
-        # Adjust size_max based on selected group
-        bubble_size = 25 if selected_group == "All" else 15
+        # Update bubble size based on number of groups selected
+        bubble_size = 25 if "All" in selected_groups else 15
 
         fig = px.scatter(
             plot_df,
@@ -82,7 +86,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             y='mobility_rate',
             color='subgroup',
             size='par_q1',
-            size_max=bubble_size,  # Use dynamic bubble size
+            size_max=bubble_size,
             hover_name='name',
             color_discrete_map=color_map,
             labels={
@@ -91,7 +95,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
                 'subgroup': 'Institution Type',
                 'par_q1': 'Q1 Students'
             },
-            title=f"Mobility vs Affordability - {selected_group}"
+            title=f"Mobility vs Affordability - {', '.join(selected_groups)}"
         )
         
         # Add black borders to all markers
@@ -112,7 +116,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             x=global_median_price - (global_median_price - x_min) * 0.7,
             y=global_median_mobility + (y_max - global_median_mobility) * 0.7,
             showarrow=False,
-            font=dict(size=14, color="black"),
+            font=dict(size=24, color="black"),
             align='left'
         )
         fig.add_annotation(
@@ -120,7 +124,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             x=global_median_price + (x_max - global_median_price) * 0.7,
             y=global_median_mobility + (y_max - global_median_mobility) * 0.7,
             showarrow=False,
-            font=dict(size=14, color="black"),
+            font=dict(size=24, color="black"),
             align='right'
         )
         fig.add_annotation(
@@ -128,7 +132,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             x=global_median_price - (global_median_price - x_min) * 0.7,
             y=global_median_mobility * 0.3,
             showarrow=False,
-            font=dict(size=14, color="black"),
+            font=dict(size=24, color="black"),
             align='left'
         )
         fig.add_annotation(
@@ -136,7 +140,7 @@ def show_affordability_analysis(df=None, parent_quintile=1):
             x=global_median_price + (x_max - global_median_price) * 0.7,
             y=global_median_mobility * 0.3,
             showarrow=False,
-            font=dict(size=14, color="black"),
+            font=dict(size=24, color="black"),
             align='right'
         )
         
@@ -145,10 +149,20 @@ def show_affordability_analysis(df=None, parent_quintile=1):
                 tickformat='$,.0f',
                 autorange='reversed',
                 range=[x_max * 1.02, x_min * 0.98],
+                title=dict(
+                    text="<b>Sticker Price ($)</b>",
+                    font=dict(size=24)
+                ),
+                tickfont=dict(size=18)
             ),
             yaxis=dict(
                 tickformat='.0%',
-                range=[y_min, y_max]
+                range=[y_min, y_max],
+                title=dict(
+                    text="<b>Mobility Rate (Q4 + Q5)</b>",
+                    font=dict(size=24)
+                ),
+                tickfont=dict(size=18)
             ),
             height=800,
             width=1200,
